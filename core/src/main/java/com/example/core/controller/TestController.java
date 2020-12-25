@@ -1,19 +1,30 @@
 package com.example.core.controller;
 
-import com.example.core.anno.SetUserInfo;
+import com.example.core.entity.dto.ImportExcelInfo;
 import com.example.core.entity.dto.UserExportDTO;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import com.example.core.util.ExcelUtil;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.IOException;
+import java.util.List;
 
 
 @RestController
 @RequestMapping("/test")
 public class TestController {
 
-    @SetUserInfo
-    @PostMapping("/first")
-    public UserExportDTO test(UserExportDTO userExportDTO) {
-        return userExportDTO;
+    @PostMapping("/export")
+    public void testExport(@RequestBody List<UserExportDTO> list) {
+        ExcelUtil.exportExcel(list, "testExport", UserExportDTO.class);
+    }
+
+    @RequestMapping("/import")
+    public List<UserExportDTO> testImport(@RequestParam("file") MultipartFile file) throws IOException {
+        ImportExcelInfo<UserExportDTO> importExcelInfo = new ImportExcelInfo<>();
+        importExcelInfo.setStream(file.getInputStream());
+        importExcelInfo.setReturnType(UserExportDTO.class);
+        importExcelInfo.setSheetName("testImport");
+        return ExcelUtil.importExcel(importExcelInfo);
     }
 }

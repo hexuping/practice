@@ -10,13 +10,13 @@ import javax.servlet.Filter;
 @Configuration
 public class FilterConfig {
 
-    @Bean
-    public FilterRegistrationBean registFilter() {
-        FilterRegistrationBean<Filter> registration = new FilterRegistrationBean<>();
-        registration.setFilter(new RequestFilter());
-        registration.addUrlPatterns("/*");
-        registration.setName("requestFilter");
-        registration.setOrder(1);
-        return registration;
-    }
+//    @Bean
+//    public FilterRegistrationBean registerFilter() {
+//        FilterRegistrationBean<Filter> registration = new FilterRegistrationBean<>();
+//        registration.setFilter(new RequestFilter());
+//        registration.addUrlPatterns("/*");
+//        registration.setName("requestFilter");
+//        registration.setOrder(1);
+//        return registration;
+//    }
 }

@@ -45,6 +45,5 @@ public class RedisConfig {
         jedisPoolConfig.setJmxEnabled(true);
         JedisPool jedisPool = new JedisPool(jedisPoolConfig, host, port, timeout, password);
         return jedisPool;
-
     }
 }

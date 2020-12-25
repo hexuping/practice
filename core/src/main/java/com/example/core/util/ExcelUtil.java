@@ -1,14 +1,13 @@
 package com.example.core.util;
 
 import com.example.core.anno.ExcelResource;
+import com.example.core.entity.dto.ImportExcelInfo;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.poi.hssf.usermodel.*;
 import org.apache.poi.poifs.filesystem.POIFSFileSystem;
+import org.springframework.beans.factory.annotation.Required;
 
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
+import java.io.*;
 import java.lang.reflect.Field;
 import java.text.SimpleDateFormat;
 import java.util.*;
@@ -19,54 +18,70 @@ public class ExcelUtil {
 
     /**
      * 导入Excel获取导入对象
-     * @param filPath
-     * @param sheetNames
+     * @param importExcelInfo
+     * @param <T>
+     * @return
+     */
+    public static <T> List<T> importExcel(ImportExcelInfo<T> importExcelInfo) {
+        try {
+            POIFSFileSystem poifsFileSystem = new POIFSFileSystem(importExcelInfo.getStream());
+            HSSFWorkbook workbook = new HSSFWorkbook(poifsFileSystem);
+            HSSFSheet sheet;
+            if(StringUtils.isNotBlank(importExcelInfo.getSheetName())) {
+                sheet = workbook.getSheet(importExcelInfo.getSheetName());
+            } else {
+                sheet = workbook.getSheetAt(importExcelInfo.getSheetIndex());
+            }
+            if(sheet == null) {
+                throw new RuntimeException("sheet不存在");
+            }
+            return readExcel(sheet, importExcelInfo.getReturnType());
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    /**
+     * 读取Excel
+     * @param sheet
      * @param returnType
      * @param <T>
      * @return
      */
-    public static <T> List<T> importExcel(String filPath, String[] sheetNames, Class<T> returnType) {
+    public static <T> List<T>  readExcel(HSSFSheet sheet, Class<T> returnType) {
         List<T> list = new ArrayList<>();
-        try {
-            POIFSFileSystem poifsFileSystem = new POIFSFileSystem(new FileInputStream(filPath));
-            HSSFWorkbook workbook = new HSSFWorkbook(poifsFileSystem);
-            for (String sheetName : sheetNames) {
-                HSSFSheet sheet = workbook.getSheet(sheetName);
-                Map<String, Integer> map = new HashMap<>();
-                for (int i = 0; i <= sheet.getLastRowNum(); i++) {
-                    HSSFRow row = sheet.getRow(i);
-                    // 第0行为表头
-                    if(i == 0) {
-                        for(int j = 0; j < row.getLastCellNum(); j++) {
-                            map.put(row.getCell(j).getStringCellValue(), j);
-                        }
-                        continue;
-                    }
-                    try {
-                        T returnObj = returnType.newInstance();
-                        Field[] declaredFields = returnType.getDeclaredFields();
-                        Arrays.asList(declaredFields).stream().forEach(field -> {
-                            if(field.isAnnotationPresent(ExcelResource.class)) {
-                                ExcelResource annotation = field.getAnnotation(ExcelResource.class);
-                                String fieldName = StringUtils.isNotBlank(annotation.name()) ? annotation.name() : annotation.value();
-                                field.setAccessible(true);
-                                try {
-                                    field.set(returnObj, row.getCell(map.get(fieldName)).getStringCellValue());
-                                } catch (IllegalAccessException e) {
-                                    e.printStackTrace();
-                                }
-                            }
-                        });
-                        list.add(returnObj);
-                    } catch (InstantiationException e) {
-                        e.printStackTrace();
-                    } catch (IllegalAccessException e) {
-                        e.printStackTrace();
-                    }
+        Map<String, Integer> map = new HashMap<>();
+        for (int i = 0; i <= sheet.getLastRowNum(); i++) {
+            HSSFRow row = sheet.getRow(i);
+            // 第0行为表头
+            if (i == 0) {
+                for (int j = 0; j < row.getLastCellNum(); j++) {
+                    map.put(row.getCell(j).getStringCellValue(), j);
                 }
+                continue;
             }
-        } catch (IOException e) {
-            e.printStackTrace();
+            try {
+                T returnObj = returnType.newInstance();
+                Field[] declaredFields = returnType.getDeclaredFields();
+                Arrays.asList(declaredFields).stream().forEach(field -> {
+                    if (field.isAnnotationPresent(ExcelResource.class)) {
+                        ExcelResource annotation = field.getAnnotation(ExcelResource.class);
+                        String fieldName = StringUtils.isNotBlank(annotation.name()) ? annotation.name() : annotation.value();
+                        field.setAccessible(true);
+                        try {
+                            field.set(returnObj, row.getCell(map.get(fieldName)).getStringCellValue());
+                        } catch (IllegalAccessException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                });
+                list.add(returnObj);
+            } catch (InstantiationException e) {
+                e.printStackTrace();
+            } catch (IllegalAccessException e) {
+                e.printStackTrace();
+            }
         }
         return list;
     }
@@ -77,7 +92,7 @@ public class ExcelUtil {
      * @param sheetName
      * @param <T>
      */
-    public static <T> void exportExcel(List<T> dataList, String sheetName) {
+    public static <T> void exportExcel(List<T> dataList, String sheetName, Class<T> clazz) {
         // 1.创建工作簿
         HSSFWorkbook workbook = new HSSFWorkbook();
         // 2.新建一个sheet
@@ -90,7 +105,7 @@ public class ExcelUtil {
         cellStyle.setAlignment(HSSFCellStyle.ALIGN_CENTER);
 
         // 获取表头类容
-        String[] templateHeaders = getTemplateHeaders(dataList.get(0));
+        String[] templateHeaders = getTemplateHeaders(clazz);
         // 创建表头
         for (int i = 0; i < templateHeaders.length; i++) {
             HSSFCell cell = header.createCell(i);
@@ -127,13 +142,13 @@ public class ExcelUtil {
 
     /**
      * 获取表头数组
-     * @param data
-     * @param <T>
+     * @param dataClass
+     * @param <?>
      * @return
      */
-    private static <T> String[] getTemplateHeaders(T data) {
+    private static String[] getTemplateHeaders(Class<?> dataClass) {
         StringBuffer stringBuffer = new StringBuffer();
-        Field[] declaredFields = data.getClass().getDeclaredFields();
+        Field[] declaredFields = dataClass.getDeclaredFields();
         Arrays.asList(declaredFields).forEach(item -> {
             if(item.isAnnotationPresent(ExcelResource.class)) {
                 // 获取注解

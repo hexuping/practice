@@ -1,6 +1,5 @@
 package com.example.core;
 
-import com.example.core.httpclient.FirstHttpClient;
 import org.junit.jupiter.api.Test;
 import org.junit.runner.RunWith;
 import org.springframework.amqp.core.AmqpTemplate;
@@ -31,15 +30,7 @@ class CoreApplicationTests {
     }
 
     @Test
-    void test1() {
-        FirstHttpClient firstHttpClient = new FirstHttpClient();
-        firstHttpClient.test();
-    }
-
-    @Test
     void test2() {
-
-
     }
 
 }
