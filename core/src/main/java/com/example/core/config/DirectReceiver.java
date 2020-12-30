@@ -8,8 +8,8 @@ import org.springframework.stereotype.Component;
 @RabbitListener(queues = "direct")
 public class DirectReceiver {
 
-//    @RabbitHandler
-//    public void process(String message) {
-//        System.out.println("接收者 directReceiver, " + message  );
-//    }
+    @RabbitHandler
+    public void process(String message) {
+        System.out.println("接收者 directReceiver, " + message  );
+    }
 }
